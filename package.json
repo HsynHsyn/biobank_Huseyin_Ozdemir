@@ -1,0 +1,30 @@
+{
+  "name": "biobank-huseyin-ozdemir",
+  "version": "1.0.0",
+  "description": "Biobank Test Automation Project by Huseyin OZDEMIR",
+  "main": "index.js",
+  "scripts": {
+    "test": "cross-env ENV=staging npx cucumber-js",
+    "test:tag": "cross-env ENV=staging npx cucumber-js --tags @bio",
+    "test:allure": "npx allure generate ./allure-results --clean && npx allure open"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "playwright": "^1.39.0"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.2.0",
+    "@cucumber/messages": "^27.2.0",
+    "@cucumber/pretty-formatter": "^1.0.1",
+    "@playwright/test": "^1.39.0",
+    "@types/node": "^20.8.9",
+    "allure-cucumberjs": "^3.2.1",
+    "allure-playwright": "^3.2.1",
+    "cross-env": "^7.0.3",
+    "cucumber-html-reporter": "^6.0.0",
+    "esbuild-register": "^3.6.0"
+  }
+}

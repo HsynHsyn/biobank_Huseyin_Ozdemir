@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Test outputs and reports
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/allure-results/
+/allure-report/
+/reports/
+
+# Screenshots
+screenshots/
+*.png
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+.cache/

@@ -131,7 +131,7 @@ This script executes:
 - `npx allure generate ./allure-results --clean`
 - `npx allure open`
 
-![alt text](image.png)
+![Allure Report Overview](image.png)
 Allure CLI is included as a local devDependency (`allure-commandline`).
 
 ---

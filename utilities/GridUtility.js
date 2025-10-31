@@ -1,9 +1,17 @@
-
-
 const { expect } = require("@playwright/test");
 const { BrowserUtility } = require("./BrowserUtility.js");
 
 class GridUtility {
+  /**
+   * Returns the Playwright page object from a Cucumber World or global context.
+   * @param {object} world - Cucumber World or step context (this)
+   * @returns {import('playwright').Page}
+   */
+  static getPageFromWorld(world) {
+    const gridPage = world.gridPage || world.page;
+    if (!gridPage) throw new Error("Playwright page not available on World.");
+    return gridPage.page || gridPage;
+  }
   /**
    * Wait for the grid to load: root present, header present, and at least one row.
    * @param {import('playwright').Page} page
@@ -26,52 +34,161 @@ class GridUtility {
     await page.waitForTimeout(150);
   }
 
-  /**
-   * Return an array of header texts (simple and clear).
-   * @param {import('playwright').Page} page
-   * @returns {Promise<string[]>}
-   */
-  static async getHeaderLabels(page) {
-    const headerCells = page.locator(".ag-header .ag-header-cell");
-    const count = await headerCells.count();
-    const labels = [];
-    for (let i = 0; i < count; i++) {
-      const text = (await headerCells.nth(i).innerText()).trim();
-      labels.push(text);
-    }
-    return labels;
+
+
+  // parseValue: returns a number if the value can be parsed as a number (commas removed),
+  // otherwise returns a lowercased string.
+  static async parseValue(v) {
+    const raw = String(v ?? "").trim();
+    const n = Number(raw.replace(/,/g, ""));
+    return Number.isNaN(n) ? raw.toLowerCase() : n;
+  }
+
+  // compareValues: compares two tokens. If both are numbers, compares numerically (a - b).
+  // Otherwise compares as strings using localeCompare (lexicographic).
+  static async compareValues(a, b) {
+    return typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a).localeCompare(String(b));
   }
 
   /**
-   * Find column index by a case-insensitive partial match on the header label.
-   * Throws a clear error if not found.
-   * @param {import('playwright').Page} page
-   * @param {string} namePart
-   * @returns {Promise<number>}
+   * Verify that provided allData is sorted in ascending order by field.
    */
-  static async getColumnIndexByName(page, namePart) {
-    const labels = await this.getHeaderLabels(page);
-    const lower = labels.map((l) => (l || "").toLowerCase());
-    const idx = lower.findIndex((t) => t.includes(namePart.toLowerCase()));
-    if (idx === -1) {
+  static sortDataAscending(allData, field) {
+    if (!allData || allData.length === 0) throw new Error("No data to sort.");
+
+    const tokens = allData.map((it, i) => {
+      if (!(field in it)) throw new Error(`Missing ${field} @${i}`);
+      return this.parseValue(it[field]);
+    });
+
+    for (let i = 1; i < tokens.length; i++) {
+      const cmp = this.compareValues(tokens[i - 1], tokens[i]);
+      expect(cmp).toBeLessThanOrEqual(
+        0,
+        `Expected ascending order but found prev="${String(
+          tokens[i - 1]
+        )}", curr="${String(tokens[i])}" at index ${i - 1}`
+      );
+    }
+
+    return true;
+  }
+
+  /**
+   * Verify that provided allData is sorted in descending order by field.
+   */
+  static sortDataDescending(allData, field) {
+    if (!allData || allData.length === 0) throw new Error("No data to sort.");
+
+    const tokens = allData.map((it, i) => {
+      if (!(field in it)) throw new Error(`Missing ${field} @${i}`);
+      return this.parseValue(it[field]);
+    });
+
+    for (let i = 1; i < tokens.length; i++) {
+      const cmp = this.compareValues(tokens[i - 1], tokens[i]);
+      expect(cmp).toBeGreaterThanOrEqual(
+        0,
+        `Expected descending order but found prev="${String(
+          tokens[i - 1]
+        )}", curr="${String(tokens[i])}" at index ${i - 1}`
+      );
+    }
+
+    return true;
+  }
+
+  /**
+   * Get the numeric row count from the grid footer/status bar.
+   * Minimal utility: waits for a footer element, reads its text and parses the first number.
+   * Default selector targets common AG Grid demo class '.ag-status-name-value-value'
+   * Returns number or null if parsing failed.
+   *
+   * @param {import('playwright').Page} page
+   * @param {string} selector
+   * @param {number} timeout
+   * @returns {Promise<number|null>}
+   */
+  static async getFooterCount(
+    page,
+    selector = ".ag-status-name-value-value",
+    timeout = 3000
+  ) {
+    const loc = page.locator(selector).first();
+    await loc.waitFor({ state: "visible", timeout });
+    const txt = (await loc.innerText()).trim();
+    const m = txt.match(/(\d[\d,\.]*)/);
+    if (!m) return null;
+    const raw = m[1].replace(/[,.]/g, "");
+    const n = parseInt(raw, 10);
+    return Number.isNaN(n) ? null : n;
+  }
+
+  static async getColumnHeaderLocator(page, namePart) {
+    // use a case-insensitive regex so partial matches work regardless of case
+    const headerCell = page
+      .locator(".ag-header .ag-header-cell", {
+        hasText: new RegExp(namePart, "i"),
+      })
+      .first();
+    if ((await headerCell.count()) === 0) {
+      // fallback: gather labels for a helpful error message
+      const labels = await this.getHeaderLabels(page);
       throw new Error(
         `Column with name containing "${namePart}" not found. Found: ${labels.join(
           ", "
         )}`
       );
     }
-    return idx;
+    return headerCell;
   }
 
   /**
-   * Click a header cell by column name (uses index lookup).
+   * Get column index by name (zero-based).
+   * @param {import('playwright').Page} page
+   * @param {string} columnName
+   * @returns {Promise<number>}
+   */
+  static async getColumnIndexByName(page, columnName) {
+    const headers = await page.locator(".ag-header .ag-header-cell").all();
+    for (let i = 0; i < headers.length; i++) {
+      const text = await headers[i].innerText();
+      if (text.toLowerCase().includes(columnName.toLowerCase())) {
+        return i;
+      }
+    }
+    throw new Error(`Column "${columnName}" not found`);
+  }
+
+  /**
+   * Get all header labels for debugging.
+   * @param {import('playwright').Page} page
+   * @returns {Promise<string[]>}
+   */
+  static async getHeaderLabels(page) {
+    const headers = await page.locator(".ag-header .ag-header-cell").all();
+    const labels = [];
+    for (const header of headers) {
+      const text = await header.innerText();
+      labels.push(text.trim());
+    }
+    return labels;
+  }
+
+  /**
+   * Click a header cell by column name (finds header by its visible text, not by index).
    * @param {import('playwright').Page} page
    * @param {string} columnName
    */
   static async clickHeaderByName(page, columnName) {
-    const idx = await this.getColumnIndexByName(page, columnName);
-    const headerCell = page.locator(".ag-header .ag-header-cell").nth(idx);
+    console.log(`Clicking header cell for column "${columnName}" (text-match)`);
+    const headerCell = await this.getColumnHeaderLocator(page, columnName);
+
+    // ensure it's visible and interactable, then click
     await headerCell.scrollIntoViewIfNeeded();
+    await expect(headerCell).toBeVisible();
     await headerCell.click();
     await page.waitForTimeout(200);
   }

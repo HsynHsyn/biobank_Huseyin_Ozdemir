@@ -1,8 +1,8 @@
-const { BasePage } = require("./pages/BasePage.js");
+const GridPage = require("./pages/GridPage.js");
 
-// Store the page and basePage instances internally
+// Store the page and gridPage instances internally
 let _page = null;
-let _basePage = null;
+let _gridPage = null;
 
 /**
  * Initializes the global page elements and instances for the automation framework.
@@ -12,7 +12,7 @@ let _basePage = null;
  */
 const initElements = (argPage) => {
   _page = argPage; // ensures that the same object is used throughout the test
-  _basePage = new BasePage(_page);
+  _gridPage = new GridPage(_page);
 };
 
 // Export getters so consumers always read the latest value at runtime
@@ -23,9 +23,9 @@ Object.defineProperty(exports, "page", {
   enumerable: true,
 });
 
-Object.defineProperty(exports, "basePage", {
+Object.defineProperty(exports, "gridPage", {
   get: function () {
-    return _basePage;
+    return _gridPage;
   },
   enumerable: true,
 });

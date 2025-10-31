@@ -1,3 +1,5 @@
+node_modules/
+
 # Dependencies
 node_modules/
 
@@ -10,7 +12,7 @@ node_modules/
 /reports/
 
 # Screenshots
-screenshots/
+/screenshots/
 *.png
 
 # Logs

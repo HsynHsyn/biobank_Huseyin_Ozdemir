@@ -3,12 +3,9 @@ module.exports = {
     paths: ["test/features/**/*.feature"],
     require: ["test/steps/**/*.js", "hooks/**/*.js"],
     format: [
-      "@cucumber/pretty-formatter", // For console output
-      "allure-cucumberjs/reporter", // For Allure reporting
+      "allure-cucumberjs/reporter",
+      "@cucumber/pretty-formatter",
+      "summary",
     ],
-    formatOptions: {
-      resultsDir: "allure-results", // Path where Allure results will be saved
-    },
-
   },
 };

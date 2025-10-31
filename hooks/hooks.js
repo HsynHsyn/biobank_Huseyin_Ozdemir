@@ -1,10 +1,4 @@
-const {
-  Before,
-  After,
-  setWorldConstructor,
-  Status,
-  setDefaultTimeout,
-} = require("@cucumber/cucumber");
+const {Before, After, setWorldConstructor, Status, setDefaultTimeout,} = require("@cucumber/cucumber");
 const { chromium, firefox, webkit } = require("@playwright/test");
 const { initElements } = require("../globalPagesSetup.js");
 const fs = require("fs");
